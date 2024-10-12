@@ -8,6 +8,53 @@
     <!-- Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Improved UI styles */
+        .season-card {
+            background-color: #343a40;
+            border: 1px solid #495057;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+
+        .season-header {
+            background-color: #495057;
+            color: #fff;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .season-header:hover {
+            background-color: #6c757d;
+        }
+
+        .collapse.show .chevron-icon {
+            transform: rotate(180deg);
+        }
+
+        .chevron-icon {
+            transition: transform 0.3s;
+        }
+
+        .list-group-item {
+            background-color: #343a40;
+            color: #fff;
+            border: none;
+            padding: 0.5rem 1.25rem;
+        }
+
+        .list-group-item:hover {
+            background-color: #495057;
+        }
+
+        a.text-light:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 
 <body class="bg-dark text-light">
@@ -40,8 +87,8 @@
         <div id="streamingContainer" class="embed-responsive embed-responsive-16by9 mb-4">
             <!-- Movie or episode will be embedded here -->
         </div>
-        <!-- Episodes List -->
-        <div id="episodesListContainer"></div>
+        <!-- Seasons and Episodes List -->
+        <div id="seasonsContainer" class="text-left"></div>
     </main>
 
     <footer class="footer text-center py-3">
@@ -53,16 +100,14 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        // Get IMDb ID and type (movie or series) from the URL
         const urlParams = new URLSearchParams(window.location.search);
         const imdbID = urlParams.get('imdbID');
-        const type = urlParams.get('type'); // 'movie', 'series', or 'episode'
-
+        const type = urlParams.get('type');
         const titleElement = document.getElementById('title');
-        const episodesListContainer = document.getElementById('episodesListContainer');
         const streamingContainer = document.getElementById('streamingContainer');
+        const seasonsContainer = document.getElementById('seasonsContainer');
 
-        // Fetch movie or series details for the title
+        // Fetch title
         fetch(`https://www.omdbapi.com/?apikey=9963d35d&i=${imdbID}`)
             .then(response => response.json())
             .then(data => {
@@ -78,54 +123,66 @@
             });
 
         if (type === 'movie') {
-            // Embed the movie player
             const iframeUrl = `https://multiembed.mov/?video_id=${imdbID}`;
-            streamingContainer.innerHTML = `<iframe class="embed-responsive-item" id="moviePlayer" width="100%" height="450" frameborder="0" allowfullscreen src="${iframeUrl}"></iframe>`;
+            streamingContainer.innerHTML = `<iframe class="embed-responsive-item" width="100%" height="450" frameborder="0" allowfullscreen src="${iframeUrl}"></iframe>`;
         } else if (type === 'series') {
-            // Fetch and display list of episodes for the series
-            fetchEpisodes(imdbID);
+            fetchSeriesSeasons(imdbID);
         } else if (type === 'episode') {
-            // Fetch episodes and display the specific episode
             const season = urlParams.get('season');
             const episode = urlParams.get('episode');
-            fetchEpisodes(imdbID, season);
+            fetchSeriesSeasons(imdbID, season);
             const episodeUrl = `https://multiembed.mov/?video_id=${imdbID}&s=${season}&e=${episode}`;
-            streamingContainer.innerHTML = `<iframe class="embed-responsive-item" id="episodePlayer" width="100%" height="450" frameborder="0" allowfullscreen src="${episodeUrl}"></iframe>`;
-
-            // Move the episode list below the player
-            moveEpisodeListBelowPlayer();
+            streamingContainer.innerHTML = `<iframe class="embed-responsive-item" width="100%" height="450" frameborder="0" allowfullscreen src="${episodeUrl}"></iframe>`;
         }
 
-        // Fetch episodes for a series
-        function fetchEpisodes(imdbID, currentSeason = 1) {
+        function fetchSeriesSeasons(imdbID, currentSeason = 1) {
             fetch(`https://www.omdbapi.com/?apikey=9963d35d&i=${imdbID}&type=series&plot=full`)
                 .then(response => response.json())
                 .then(data => {
                     if (data && data.totalSeasons) {
-                        let episodesHTML = `<h2>${data.Title} - Total Seasons: ${data.totalSeasons}</h2>`;
-                        episodesHTML += '<ul id="episodeList" class="list-group list-group-flush text-left"></ul>';
-                        episodesListContainer.innerHTML = episodesHTML;
-                        fetchSeasonEpisodes(imdbID, currentSeason);  // Fetch the current season's episodes
+                        let seasonsHTML = '';
+                        for (let season = 1; season <= data.totalSeasons; season++) {
+                            seasonsHTML += `
+                                <div class="season-card">
+                                    <div class="season-header" data-toggle="collapse" href="#collapseSeason${season}" role="button" aria-expanded="false" aria-controls="collapseSeason${season}">
+                                        <span>Season ${season}</span>
+                                        <i class="chevron-icon fas fa-chevron-down"></i>
+                                    </div>
+                                    <div class="collapse" id="collapseSeason${season}">
+                                        <ul class="list-group list-group-flush" id="episodeListSeason${season}">
+                                            <li class="list-group-item bg-dark text-light">Loading episodes...</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        seasonsContainer.innerHTML = seasonsHTML;
+
+                        for (let season = 1; season <= data.totalSeasons; season++) {
+                            fetchSeasonEpisodes(imdbID, season);
+                        }
                     }
                 })
                 .catch(error => {
-                    episodesListContainer.innerHTML = `<p class="text-danger">Error loading series details.</p>`;
+                    seasonsContainer.innerHTML = `<p class="text-danger">Error loading series details.</p>`;
                     console.error('Error fetching series data:', error);
                 });
         }
 
-        // Fetch episodes for a specific season
         function fetchSeasonEpisodes(imdbID, season) {
             fetch(`https://www.omdbapi.com/?apikey=9963d35d&i=${imdbID}&Season=${season}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data && data.Episodes) {
-                        const episodeList = document.getElementById('episodeList');
-                        episodeList.innerHTML = '';
+                        const episodeList = document.getElementById(`episodeListSeason${season}`);
+                        episodeList.innerHTML = '';  // Clear the "Loading episodes..." text
                         data.Episodes.forEach(episode => {
                             const episodeItem = document.createElement('li');
                             episodeItem.classList.add('list-group-item', 'bg-dark', 'text-light');
-                            episodeItem.innerHTML = `<a href="streaming.html?imdbID=${imdbID}&type=episode&season=${season}&episode=${episode.Episode}" class="text-light">${episode.Title} - Episode ${episode.Episode}</a>`;
+                            episodeItem.innerHTML = `
+                                <a href="streaming.html?imdbID=${imdbID}&type=episode&season=${season}&episode=${episode.Episode}" class="text-light">
+                                    ${episode.Title} - Episode ${episode.Episode}
+                                </a>`;
                             episodeList.appendChild(episodeItem);
                         });
                     }
@@ -134,13 +191,8 @@
                     console.error('Error fetching episodes:', error);
                 });
         }
-
-        // Function to move episode list below the player
-        function moveEpisodeListBelowPlayer() {
-            const mainContainer = document.querySelector('main');
-            mainContainer.appendChild(episodesListContainer);  // Move episodes list below player
-        }
     </script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script> <!-- For icons -->
 </body>
 
 </html>
