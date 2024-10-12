@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Movie or TV Show</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="bg-dark text-light">
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <a class="navbar-brand" href="index.html">Popcorn Movies</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="movies.html">Movies</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="series.html">Series</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container text-center my-5">
+        <!-- Dynamic Title -->
+        <h1 id="title" class="mb-4">Loading...</h1>
+        <!-- Streaming Player -->
+        <div id="streamingContainer" class="embed-responsive embed-responsive-16by9 mb-4">
+            <!-- Movie or episode will be embedded here -->
+        </div>
+        <!-- Episodes List -->
+        <div id="episodesListContainer"></div>
+    </main>
+
+    <footer class="footer text-center py-3">
+        <p class="mb-0">Built by Menzi Shazi</p>
+    </footer>
+
+    <!-- Bootstrap JS, Popper.js, and jQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        // Get IMDb ID and type (movie or series) from the URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const imdbID = urlParams.get('imdbID');
+        const type = urlParams.get('type'); // 'movie', 'series', or 'episode'
+
+        const titleElement = document.getElementById('title');
+        const episodesListContainer = document.getElementById('episodesListContainer');
+        const streamingContainer = document.getElementById('streamingContainer');
+
+        // Fetch movie or series details for the title
+        fetch(`https://www.omdbapi.com/?apikey=9963d35d&i=${imdbID}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.Title) {
+                    titleElement.textContent = data.Title;
+                } else {
+                    titleElement.textContent = 'Streaming';
+                }
+            })
+            .catch(error => {
+                titleElement.textContent = 'Streaming';
+                console.error('Error fetching title data:', error);
+            });
+
+        if (type === 'movie') {
+            // Embed the movie player
+            const iframeUrl = `https://multiembed.mov/?video_id=${imdbID}`;
+            streamingContainer.innerHTML = `<iframe class="embed-responsive-item" id="moviePlayer" width="100%" height="450" frameborder="0" allowfullscreen src="${iframeUrl}"></iframe>`;
+        } else if (type === 'series') {
+            // Fetch and display list of episodes for the series
+            fetchEpisodes(imdbID);
+        } else if (type === 'episode') {
+            // Fetch episodes and display the specific episode
+            const season = urlParams.get('season');
+            const episode = urlParams.get('episode');
+            fetchEpisodes(imdbID, season);
+            const episodeUrl = `https://multiembed.mov/?video_id=${imdbID}&s=${season}&e=${episode}`;
+            streamingContainer.innerHTML = `<iframe class="embed-responsive-item" id="episodePlayer" width="100%" height="450" frameborder="0" allowfullscreen src="${episodeUrl}"></iframe>`;
+
+            // Move the episode list below the player
+            moveEpisodeListBelowPlayer();
+        }
+
+        // Fetch episodes for a series
+        function fetchEpisodes(imdbID, currentSeason = 1) {
+            fetch(`https://www.omdbapi.com/?apikey=9963d35d&i=${imdbID}&type=series&plot=full`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.totalSeasons) {
+                        let episodesHTML = `<h2>${data.Title} - Total Seasons: ${data.totalSeasons}</h2>`;
+                        episodesHTML += '<ul id="episodeList" class="list-group list-group-flush text-left"></ul>';
+                        episodesListContainer.innerHTML = episodesHTML;
+                        fetchSeasonEpisodes(imdbID, currentSeason);  // Fetch the current season's episodes
+                    }
+                })
+                .catch(error => {
+                    episodesListContainer.innerHTML = `<p class="text-danger">Error loading series details.</p>`;
+                    console.error('Error fetching series data:', error);
+                });
+        }
+
+        // Fetch episodes for a specific season
+        function fetchSeasonEpisodes(imdbID, season) {
+            fetch(`https://www.omdbapi.com/?apikey=9963d35d&i=${imdbID}&Season=${season}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.Episodes) {
+                        const episodeList = document.getElementById('episodeList');
+                        episodeList.innerHTML = '';
+                        data.Episodes.forEach(episode => {
+                            const episodeItem = document.createElement('li');
+                            episodeItem.classList.add('list-group-item', 'bg-dark', 'text-light');
+                            episodeItem.innerHTML = `<a href="streaming.html?imdbID=${imdbID}&type=episode&season=${season}&episode=${episode.Episode}" class="text-light">${episode.Title} - Episode ${episode.Episode}</a>`;
+                            episodeList.appendChild(episodeItem);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching episodes:', error);
+                });
+        }
+
+        // Function to move episode list below the player
+        function moveEpisodeListBelowPlayer() {
+            const mainContainer = document.querySelector('main');
+            mainContainer.appendChild(episodesListContainer);  // Move episodes list below player
+        }
+    </script>
+</body>
+
+</html>

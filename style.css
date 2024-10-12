@@ -1,0 +1,98 @@
+/* Background image with a dark overlay */
+body {
+    position: relative;
+    min-height: 100vh;
+    background: url('https://c4.wallpaperflare.com/wallpaper/862/449/162/jack-reacher-star-wars-interstellar-movie-john-wick-wallpaper-preview.jpg') no-repeat center center fixed;
+    background-size: cover;
+    font-family: 'Roboto', sans-serif;
+    color: #e0e0e0;
+    z-index: 1;
+}
+
+/* Dark overlay to dim the background */
+body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent black layer */
+    z-index: -1; /* Ensure it stays behind the content */
+}
+
+/* Adjust text and components for readability on the dimmed background */
+header, .navbar {
+    background-color: rgba(0, 0, 0, 0.85); /* Slightly transparent black */
+}
+
+h1, h2 {
+    color: #fff;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8); /* Text shadow for better readability */
+}
+
+input::placeholder {
+    color: #888;
+}
+
+/* Styling for main content areas */
+#MoviesGrid {
+    margin-top: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.movie-card {
+    width: calc(25% - 20px);
+    margin: 10px;
+    background-color: rgba(0, 0, 0, 0.7); /* Transparent black background for cards */
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    color: white;
+}
+
+.movie-card img {
+    border-radius: 8px;
+    margin-bottom: 10px;
+    max-width: 100%;
+    height: auto;
+}
+
+.movie-card h2 {
+    font-size: 1.25rem;
+    color: #fff;
+}
+
+.movie-card p {
+    color: #bbb;
+}
+
+/* Responsive layouts */
+@media screen and (max-width: 1200px) {
+    .movie-card {
+        width: calc(33.33% - 20px);
+    }
+}
+
+@media screen and (max-width: 800px) {
+    .movie-card {
+        width: calc(50% - 20px);
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .movie-card {
+        width: calc(100% - 20px);
+    }
+}
+
+/* Footer and other elements if needed */
+footer {
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 1rem;
+    text-align: center;
+}
